@@ -78,7 +78,7 @@ Python 3.9 or later is recommended.
 
 ```bash
 git clone https://github.com/Gaith2000korchid/debruijn-genome-assembler.git
-cd debruinj-tp
+cd debruijn-genome-assembler
 
 python3 -m venv .venv
 source .venv/bin/activate
@@ -114,6 +114,33 @@ python -m debruijn.debruijn --help
 ```
 
 ## Tests and code checks
+
+### Docker
+
+Build the container once:
+
+```bash
+docker build -t debruijn-assembler:local .
+```
+
+Run the included two-read example. Input is mounted read-only and output is written to a separate directory on the host:
+
+```bash
+mkdir -p results
+docker run --rm \
+  --user "$(id -u):$(id -g)" \
+  --mount "type=bind,src=$(pwd)/data,dst=/input,readonly" \
+  --mount "type=bind,src=$(pwd)/results,dst=/output" \
+  debruijn-assembler:local -i /input/eva71_two_reads.fq -k 22 -o /output/contigs.fasta
+```
+
+The image runs as an unprivileged user by default. The `--user` option maps it to your host user so it can write to `results` without changing directory permissions. The image intentionally excludes the example data: mount your own FASTQ file under `/input`.
+
+### Automated CI and image delivery
+
+GitHub Actions runs the Python test suite, builds the Docker image, and executes a FASTQ-to-FASTA smoke test on pull requests and pushes to `master`. A version tag such as `v1.1.0` runs those checks and, if they pass, publishes `ghcr.io/gaith2000korchid/debruijn-genome-assembler:v1.1.0` to GitHub Container Registry. Publication is the delivery step; this CLI has no running server to deploy. The first package may require changing its visibility in GitHub Packages if you want anonymous pulls.
+
+This extension applies the container and GitHub Actions ideas from Coursera to this existing bioinformatics program; the Dockerfile, pipeline, and smoke test are tailored to its CLI and example FASTQ data. See [ATTRIBUTION.md](ATTRIBUTION.md) for the original course scaffold and data provenance.
 
 Run the test suite with coverage:
 
