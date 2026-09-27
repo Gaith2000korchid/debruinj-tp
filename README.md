@@ -1,8 +1,12 @@
 # De Bruijn Genome Assembler
 
+[![Test, containerize and publish](https://github.com/Gaith2000korchid/debruijn-genome-assembler/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/Gaith2000korchid/debruijn-genome-assembler/actions/workflows/ci-cd.yml)
+
 An educational Python implementation of a short-read genome assembler based on a weighted De Bruijn graph.
 
 > **Project status:** university course project maintained as a portfolio example. It is intended for learning and demonstration, not for production-scale genome assembly.
+
+**Try it quickly:** `docker build -t debruijn-assembler:local .` then use the mounted-input example in [Docker](#docker). Each change runs Python tests and a real containerized FASTQ-to-FASTA check in [GitHub Actions](https://github.com/Gaith2000korchid/debruijn-genome-assembler/actions).
 
 ## Overview
 
@@ -113,7 +117,7 @@ Display all command-line options:
 python -m debruijn.debruijn --help
 ```
 
-## Tests and code checks
+## Reproducible execution and CI/CD
 
 ### Docker
 
@@ -141,6 +145,8 @@ The image runs as an unprivileged user by default. The `--user` option maps it t
 GitHub Actions runs the Python test suite, builds the Docker image, and executes a FASTQ-to-FASTA smoke test on pull requests and pushes to `master`. A version tag such as `v1.1.0` runs those checks and, if they pass, publishes `ghcr.io/gaith2000korchid/debruijn-genome-assembler:v1.1.0` to GitHub Container Registry. Publication is the delivery step; this CLI has no running server to deploy. The first package may require changing its visibility in GitHub Packages if you want anonymous pulls.
 
 This extension applies the container and GitHub Actions ideas from Coursera to this existing bioinformatics program; the Dockerfile, pipeline, and smoke test are tailored to its CLI and example FASTQ data. See [ATTRIBUTION.md](ATTRIBUTION.md) for the original course scaffold and data provenance.
+
+### Local code checks
 
 Run the test suite with coverage:
 
