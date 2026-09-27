@@ -45,7 +45,7 @@ __credits__ = [
     "Gaith Korchid (student implementation)",
 ]
 __license__ = "GPL-3.0-or-later"
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 __maintainer__ = "Gaith Korchid"
 __status__ = "Educational"
 
