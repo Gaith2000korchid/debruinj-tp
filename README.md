@@ -10,6 +10,26 @@ An educational Python implementation of a short-read genome assembler based on a
 
 [Présentation française](docs/PRESENTATION_FR.md) · [Maintenance and validation](docs/MAINTENANCE.md)
 
+## Start here
+
+**Contribution:** implementation of the core assembly functions from an attributed university scaffold, extended with FASTQ validation, graph regression tests, locked dependencies and a container smoke test.
+
+| Stage | Example input or output |
+|---|---|
+| Read | Included `data/eva71_hundred_reads.fq` |
+| Build and simplify | Weighted De Bruijn graph, k = 22, bubble/tip handling |
+| Export | Contig sequences in `contigs.fasta` |
+
+**Demo entry point** (after [installation](#installation), from the repository root):
+
+```bash
+python -m debruijn.debruijn -i data/eva71_hundred_reads.fq -k 22 -o contigs.fasta
+```
+
+This demonstrates execution on a teaching fixture; it is not an assembly-accuracy or scale benchmark.
+
+[Contribution and attribution](ATTRIBUTION.md) · [Maintenance evidence](docs/MAINTENANCE.md) · [Docker execution](#docker)
+
 ## Overview
 
 The program reads single-end FASTQ sequences, extracts k-mers, builds a directed weighted graph, removes simple bubbles and tips, and writes the resulting contigs in FASTA format.
