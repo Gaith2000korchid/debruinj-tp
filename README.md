@@ -8,6 +8,8 @@ An educational Python implementation of a short-read genome assembler based on a
 
 **Try it quickly:** `docker build -t debruijn-assembler:local .` then use the mounted-input example in [Docker](#docker). Each change runs Python tests and a real containerized FASTQ-to-FASTA check in [GitHub Actions](https://github.com/Gaith2000korchid/debruijn-genome-assembler/actions).
 
+[Présentation française](docs/PRESENTATION_FR.md) · [Maintenance and validation](docs/MAINTENANCE.md)
+
 ## Overview
 
 The program reads single-end FASTQ sequences, extracts k-mers, builds a directed weighted graph, removes simple bubbles and tips, and writes the resulting contigs in FASTA format.
@@ -78,7 +80,7 @@ The repository contains viral reference and simulated sequencing data only. It c
 
 ## Installation
 
-Python 3.9 or later is recommended.
+The frozen runtime and development locks target Python 3.12. Use this version for the documented reproducible installation; other Python versions are not promised by this lock.
 
 ```bash
 git clone https://github.com/Gaith2000korchid/debruijn-genome-assembler.git
@@ -87,7 +89,7 @@ cd debruijn-genome-assembler
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
-python -m pip install -r requirements-dev.txt
+python -m pip install --require-hashes -r requirements-dev.lock
 ```
 
 ## Usage
@@ -165,7 +167,8 @@ The tests and grading fixture originate from the teaching repository and are ret
 ## Limitations
 
 - This is a teaching implementation, not a replacement for established assemblers.
-- The FASTQ reader assumes valid four-line records.
+- The FASTQ reader accepts plain or gzip-compressed four-line records and rejects truncated records, invalid header/separator lines and sequence/quality length mismatches. Multiline FASTQ is not supported.
+- Circular components without sources/sinks are not reconstructed by this teaching design; bubble simplification assumes a directed acyclic graph.
 - The graph simplification rules are deliberately basic.
 - Exhaustive path enumeration does not scale to large sequencing datasets.
 - Only single-end reads are handled.

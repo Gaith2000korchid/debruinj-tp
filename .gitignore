@@ -4,5 +4,10 @@ __pycache__/
 .pytest_cache/
 htmlcov/
 .venv/
+.env
+.env.*
+!.env.example
+*.pem
+*.key
 contigs.fasta
 graph.png

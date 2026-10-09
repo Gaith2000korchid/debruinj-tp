@@ -14,6 +14,7 @@
 """Perform assembly based on debruijn graph."""
 
 import argparse
+import gzip
 import os
 import sys
 from pathlib import Path
@@ -21,6 +22,7 @@ import random
 import statistics
 import textwrap
 from random import randint
+from itertools import islice
 from typing import Iterator, Dict, List
 import matplotlib
 import matplotlib.pyplot as plt
@@ -103,11 +105,21 @@ def read_fastq(fastq_file: Path) -> Iterator[str]:
     :param fastq_file: (Path) Path to the fastq file.
     :return: A generator object that iterate the read sequences.
     """
-    with open(fastq_file,'rt') as monfichier:
-        for line in monfichier:
-            yield next(monfichier).replace('\n','')
-            next(monfichier)
-            next(monfichier)
+    opener = gzip.open if str(fastq_file).endswith(".gz") else open
+    with opener(fastq_file, "rt") as handle:
+        record = 0
+        while header := handle.readline():
+            record += 1
+            sequence, separator, quality = (handle.readline() for _ in range(3))
+            if not sequence or not separator or not quality:
+                raise ValueError(f"Truncated FASTQ record {record}")
+            sequence = sequence.rstrip("\r\n")
+            quality = quality.rstrip("\r\n")
+            if not header.startswith("@") or not separator.startswith("+"):
+                raise ValueError(f"Invalid FASTQ header/separator at record {record}")
+            if not sequence or len(sequence) != len(quality):
+                raise ValueError(f"Invalid FASTQ sequence/quality lengths at record {record}")
+            yield sequence
 
 
 def cut_kmer(read: str, kmer_size: int) -> Iterator[str]:
@@ -116,6 +128,8 @@ def cut_kmer(read: str, kmer_size: int) -> Iterator[str]:
     :param read: (str) Sequence of a read.
     :return: A generator object that provides the kmers (str) of size kmer_size.
     """
+    if kmer_size < 2:
+        raise ValueError("k-mer size must be at least 2")
     for i in range(0,len(read)-kmer_size+1):
         yield read[i:i+kmer_size]
 
@@ -193,6 +207,8 @@ def select_best_path(
     :param delete_sink_node: (boolean) True->We remove the last node of a path
     :return: (nx.DiGraph) A directed graph object
     """
+    if len(path_list) < 2:
+        return graph
     if statistics.stdev(weight_avg_list) > 0:
         best_path_index = weight_avg_list.index(max(weight_avg_list))
     elif statistics.stdev(path_length) > 0:
@@ -212,9 +228,8 @@ def path_average_weight(graph: DiGraph, path: List[str]) -> float:
     :param path: (list) A path consist of a list of nodes
     :return: (float) The average weight of a path
     """
-    return statistics.mean(
-        [d["weight"] for (u, v, d) in graph.subgraph(path).edges(data=True)]
-    )
+    return statistics.mean(graph.edges[left, right]["weight"]
+                           for left, right in zip(path, path[1:]))
 
 
 def solve_bubble(graph: DiGraph, ancestor_node: str, descendant_node: str) -> DiGraph:
@@ -240,21 +255,26 @@ def simplify_bubbles(graph: DiGraph) -> DiGraph:
     :param graph: (nx.DiGraph) A directed graph object
     :return: (nx.DiGraph) A directed graph object
     """
-    bubble = False
-    for node in graph:
-        list_pred = list(graph.predecessors(node))
-        if len(list_pred) > 1:
-            # On teste les combinaisons uniques de (i, j) où i < j
-            for i in range(len(list_pred) - 1):
-                for j in range(i+1, len(list_pred)):
-                    anc_node = lowest_common_ancestor(graph, list_pred[i], list_pred[j])
-                    if anc_node:
-                        bubble = True
+    while True:
+        candidate = None
+        for node in graph:
+            predecessors = list(graph.predecessors(node))
+            for i in range(len(predecessors) - 1):
+                for j in range(i + 1, len(predecessors)):
+                    ancestor = lowest_common_ancestor(
+                        graph, predecessors[i], predecessors[j]
+                    )
+                    if ancestor is not None and len(list(islice(
+                            all_simple_paths(graph, ancestor, node), 2))) == 2:
+                        candidate = (ancestor, node)
                         break
-    if bubble:
-        graph = simplify_bubbles(solve_bubble(graph, anc_node, node))
-
-    return graph
+                if candidate is not None:
+                    break
+            if candidate is not None:
+                break
+        if candidate is None:
+            return graph
+        graph = solve_bubble(graph, *candidate)
 
 
 def solve_entry_tips(graph: DiGraph, starting_nodes: List[str]) -> DiGraph:
@@ -264,6 +284,7 @@ def solve_entry_tips(graph: DiGraph, starting_nodes: List[str]) -> DiGraph:
     :param starting_nodes: (list) A list of starting nodes
     :return: (nx.DiGraph) A directed graph object
     """
+    starting_nodes = [node for node in starting_nodes if node in graph]
     list_path = []
     list_weight = []
     path_length = []
@@ -298,6 +319,7 @@ def solve_out_tips(graph: DiGraph, ending_nodes: List[str]) -> DiGraph:
     :param ending_nodes: (list) A list of ending nodes
     :return: (nx.DiGraph) A directed graph object
     """
+    ending_nodes = [node for node in ending_nodes if node in graph]
     list_path = []
     list_weight = []
     path_length = []
@@ -431,7 +453,11 @@ def main() -> None:  # pragma: no cover
     sink_nodes = get_sink_nodes(graph)
 
     graph = solve_entry_tips(graph, starting_nodes)
-    graph = solve_out_tips(graph, sink_nodes)
+    graph = solve_out_tips(graph, get_sink_nodes(graph))
+
+    # Tip simplification can delete the original extremities.
+    starting_nodes = get_starting_nodes(graph)
+    sink_nodes = get_sink_nodes(graph)
 
     # Get contigs
     contigs_list = get_contigs(graph, starting_nodes, sink_nodes)

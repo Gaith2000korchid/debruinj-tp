@@ -7,8 +7,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt \
+COPY requirements.lock .
+RUN pip install --no-cache-dir --require-hashes -r requirements.lock \
     && groupadd --system assembler \
     && useradd --system --gid assembler --home-dir /app assembler \
     && mkdir -p /output /tmp/matplotlib \
